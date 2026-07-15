@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>지원이 키우기 : 리스크 관리</title>
+    <!-- Chart.js 라이브러리 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Pretendard', 'Malgun Gothic', sans-serif;
+        }
+
+        body {
+            background-color: #0f172a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #f8fafc;
+            overflow-x: hidden;
+            transition: background-color 0.8s ease;
+        }
+
+        /* 😱 파산 시 무서운 배경 테마 */
+        body.bankrupt {
+            background-color: #1a0000;
+            animation: pulseRedBg 3s infinite alternate;
+        }
+
+        @keyframes pulseRedBg {
+            0% { background-color: #1a0000; }
+            100% { background-color: #3b0000; }
+        }
+
+        .game-container {
+            background-color: #1e293b;
+            width: 420px;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            position: relative;
+            border: 1px solid #334155;
+            transition: all 0.5s ease;
+        }
+
+        /* 파산 상태 컨테이너 테두리 경고 */
+        .game-container.bankrupt-border {
+            border: 2px solid #ff0000;
+            box-shadow: 0 0 25px rgba(255, 0, 0, 0.6);
+            background-color: #2a0808;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+            color: #38bdf8;
+            transition: color 0.5s;
+        }
+
+        .bankrupt-border h1 {
+            color: #ff4d4d;
+            text-shadow: 0 0 8px #ff0000;
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: #94a3b8;
+            margin-bottom: 15px;
+        }
+
+        /* 자산 및 베팅 상태 */
+        .money-box {
+            background-color: #0f172a;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #334155;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .money-title {
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        .money-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #34d399;
+        }
+
+        .debt-value {
+            font-size: 14px;
+            color: #f87171;
+            font-weight: bold;
+        }
+
+        /* 캐릭터 이미지 스타일링 */
+        .character-box {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto 15px auto;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 4px solid #38bdf8;
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #0f172a;
+            position: relative;
+            transition: all 0.5s ease;
+        }
+
+        .bankrupt-border .character-box {
+            border-color: #ff0000;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.8);
+        }
+
+        .character-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: filter 0.5s ease, transform 0.3s ease;
+        }
+
+        .grad-cap-overlay {
+            position: absolute;
+            top: 10px;
+            font-size: 50px;
+            display: none;
+            animation: bounce 1s infinite alternate;
+        }
+
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-10px); }
+        }
+
+        /* 레벨 및 상태 정보 */
+        .status-box {
+            background-color: #0f172a;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #334155;
+        }
+
+        .level-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #fbbf24;
+            margin-bottom: 5px;
+        }
+
+        .log-message {
+            font-size: 13px;
+            min-height: 20px;
+            color: #cbd5e1;
+            font-weight: 500;
+        }
+
+        /* 베팅 및 버튼 영역 */
+        .bet-container {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        .bet-label {
+            font-size: 12px;
+            color: #94a3b8;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .bet-slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #334155;
+            outline: none;
+            accent-color: #38bdf8;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 8px;
+            flex-direction: column;
+        }
+
+        .sub-button-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex: 1;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-enhance {
+            background-color: #0284c7;
+            color: white;
+            font-size: 16px;
+        }
+
+        .btn-enhance:hover {
+            background-color: #0369a1;
+        }
+
+        .btn-loan {
+            background-color: #dc2626;
+            color: white;
+        }
+
+        .btn-loan:hover {
+            background-color: #b91c1c;
+        }
+
+        .btn-repay {
+            background-color: #16a34a;
+            color: white;
+        }
+
+        .btn-repay:hover {
+            background-color: #15803d;
+        }
+
+        .btn-info {
+            background-color: #334155;
+            color: #cbd5e1;
+        }
+
+        .btn-info:hover {
+            background-color: #475569;
+        }
+
+        .btn-graph {
+            background-color: #059669;
+            color: white;
+        }
+
+        .btn-graph:hover {
+            background-color: #047857;
+        }
+
+        /* 모달 창 */
+        .modal-overlay {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            border-radius: 20px;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .modal-content {
+            background-color: #1e293b;
+            padding: 20px;
+            border-radius: 15px;
+            width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+            text-align: center;
+            border: 1px solid #475569;
+        }
+
+        .modal-content h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #38bdf8;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            margin-bottom: 15px;
+            color: #f8fafc;
+        }
+
+        th, td {
+            border: 1px solid #334155;
+            padding: 6px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #0f172a;
+            color: #38bdf8;
+        }
+
+        .current-row {
+            background-color: #1e3a8a;
+            font-weight: bold;
+            color: #fbbf24;
+        }
+
+        .btn-close {
+            width: 100%;
+            padding: 10px;
+            background-color: #475569;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 230px;
+            margin-bottom: 10px;
+        }
+
+        /* 😱 무서운 대출 경고 모달 레이아웃 */
+        .scary-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #000000;
+            z-index: 999;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            animation: flashRed 0.2s infinite alternate;
+        }
+
+        @keyframes flashRed {
+            0% { background-color: #000000; }
+            100% { background-color: #450000; }
+        }
+
+        .scary-title {
+            color: #ff0000;
+            font-size: 38px;
+            font-weight: 900;
+            text-shadow: 0 0 20px #ff0000;
+            margin-bottom: 20px;
+            animation: shake 0.1s infinite;
+        }
+
+        .scary-desc {
+            color: #ffffff;
+            font-size: 20px;
+            text-align: center;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            font-weight: bold;
+        }
+
+        @keyframes shake {
+            0% { transform: translate(2px, 2px); }
+            50% { transform: translate(-2px, -2px); }
+            100% { transform: translate(2px, -2px); }
+        }
+
+        .scary-btn-group {
+            display: flex;
+            gap: 15px;
+            flex-direction: column;
+            width: 80%;
+            max-width: 350px;
+        }
+
+        .btn-scary-confirm {
+            background-color: #ff0000;
+            color: white;
+            padding: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            border: 2px solid white;
+            cursor: pointer;
+            box-shadow: 0 0 30px #ff0000;
+        }
+
+        .btn-scary-cancel {
+            background-color: #334155;
+            color: #cbd5e1;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            border: 1px solid #64748b;
+            cursor: pointer;
+        }
+
+        .btn-scary-cancel:hover {
+            background-color: #475569;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container" id="game-container">
+        <h1>지원이 키우기 : 리스크 관리</h1>
+        <p class="subtitle">베팅하여 확률을 높이고 실시간 그래프를 확인하세요!</p>
+
+        <!-- 소지금 및 대출 정보 -->
+        <div class="money-box">
+            <div>
+                <div class="money-title">소지금</div>
+                <div class="money-value" id="money-display">1,000,000원</div>
+            </div>
+            <div>
+                <div class="money-title">대출금 (이자는 덤)</div>
+                <div class="debt-value" id="debt-display">0원</div>
+            </div>
+        </div>
+
+        <!-- 캐릭터 이미지 영역 -->
+        <div class="character-box">
+            <img id="character-img" class="character-img" src="https://i.postimg.cc/WpwjFk6L/Smart-Select-20260715-092747-Samsung-Notes.jpg" alt="지원이 캐릭터">
+            <div id="grad-cap" class="grad-cap-overlay">🎓</div>
+        </div>
+
+        <!-- 상태 메세지 -->
+        <div class="status-box">
+            <div class="level-title" id="level-display">Lv.1 고1 입학</div>
+            <div class="log-message" id="log-display">지원이의 고등학교 생활이 시작되었습니다!</div>
+        </div>
+
+        <!-- 베팅 슬라이더 -->
+        <div class="bet-container">
+            <div class="bet-label">
+                <span>강화 베팅금</span>
+                <span id="bet-display">0원 (+0% 보너스)</span>
+            </div>
+            <input type="range" id="bet-slider" class="bet-slider" min="0" max="1000000" value="0" step="10000" oninput="updateBet()">
+        </div>
+
+        <!-- 버튼 조작 -->
+        <div class="button-group">
+            <button class="btn btn-enhance" id="enhance-btn" onclick="enhance()">육성하기 (강화)</button>
+            <div class="sub-button-group">
+                <button class="btn btn-loan" onclick="triggerScaryLoan()">🚨 사채 대출</button>
+                <button class="btn btn-repay" onclick="repayDebt()">💸 빚 갚기</button>
+            </div>
+            <div class="sub-button-group">
+                <button class="btn btn-graph" onclick="openGraphModal()">📈 실시간 그래프</button>
+                <button class="btn btn-info" onclick="toggleModal('rate-modal', true)">확률표 보기</button>
+            </div>
+        </div>
+
+        <!-- 확률 모달 창 -->
+        <div class="modal-overlay" id="rate-modal">
+            <div class="modal-content">
+                <h2>단계별 기본 확률 및 지원금</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>단계</th>
+                            <th>칭호</th>
+                            <th>기본 확률</th>
+                            <th>성공 지원금</th>
+                        </tr>
+                    </thead>
+                    <tbody id="probability-table"></tbody>
+                </table>
+                <button class="btn-close" onclick="toggleModal('rate-modal', false)">닫기</button>
+            </div>
+        </div>
+
+        <!-- 실시간 꺾은선 그래프 모달 -->
+        <div class="modal-overlay" id="graph-modal">
+            <div class="modal-content">
+                <h2>📈 지원이 레벨 실시간 변화 추이</h2>
+                <div class="chart-container">
+                    <canvas id="levelLineChart"></canvas>
+                </div>
+                <button class="btn-close" onclick="toggleModal('graph-modal', false)">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 😱 무서운 대출 경고 팝업 -->
+    <div class="scary-overlay" id="scary-overlay">
+        <div class="scary-title">⚠️ 영혼 담보 사채 계약 ⚠️</div>
+        <div class="scary-desc">
+            당신은 감당할 수 없는 **1,000,000원**의 사채를 신청하셨습니다.<br><br>
+            원금의 2배가 빚으로 적립되며,<br>
+            포기하는 순간 지원이의 졸업은 영원히 불가능해집니다...<br><br>
+            <span style="color:#ff0000;">정말로 인생을 걸고 대출받으시겠습니까?</span>
+        </div>
+        <div class="scary-btn-group">
+            <button class="btn-scary-confirm" onclick="confirmLoan()">내 영혼을 걸고 대출받기</button>
+            <button class="btn-scary-cancel" onclick="cancelLoan()">대출 취소 (지원이를 위해 참기)</button>
+        </div>
+    </div>
+
+    <script>
+        // 기본 데이터
+        const levelData = [
+            { level: 1, title: "Lv.1 고1 입학", baseRate: 100 },
+            { level: 2, title: "Lv.2 적응하는 중", baseRate: 85 },
+            { level: 3, title: "Lv.3 첫 중간고사", baseRate: 70 },
+            { level: 4, title: "Lv.4 동아리 부장", baseRate: 60 },
+            { level: 5, title: "Lv.5 고2 진학", baseRate: 50 },
+            { level: 6, title: "Lv.6 수능 준비생", baseRate: 40 },
+            { level: 7, title: "Lv.7 예비 수험생", baseRate: 30 },
+            { level: 8, title: "Lv.8 고3 수험생", baseRate: 20 },
+            { level: 9, title: "Lv.9 D-Day 직전", baseRate: 10 },
+            { level: 10, title: "Lv.10 ★학교 졸업★", baseRate: 0 }
+        ];
+
+        let currentLevel = 1;
+        let money = 1000000;
+        let debt = 0;
+        let betAmount = 0;
+
+        // 히든 지원이 상태
+        let isHiddenJiwon = false;
+
+        // 꺾은선 그래프용 히스토리 기록 데이터
+        let levelHistory = [1];
+        let attemptHistory = ['시작'];
+        let attemptCount = 0;
+        let chartInstance = null;
+
+        // Elements
+        const container = document.getElementById('game-container');
+        const characterImg = document.getElementById('character-img');
+        const levelDisplay = document.getElementById('level-display');
+        const logDisplay = document.getElementById('log-display');
+        const moneyDisplay = document.getElementById('money-display');
+        const debtDisplay = document.getElementById('debt-display');
+        const betSlider = document.getElementById('bet-slider');
+        const betDisplay = document.getElementById('bet-display');
+        const enhanceBtn = document.getElementById('enhance-btn');
+        const gradCap = document.getElementById('grad-cap');
+
+        // UI 업데이트 및 파산 체크
+        function updateUI() {
+            moneyDisplay.textContent = money.toLocaleString() + "원";
+            debtDisplay.textContent = debt.toLocaleString() + "원";
+            
+            // 💀 파산 상태 체크 (소지금 0원 시 공포 모드)
+            if (money <= 0) {
+                document.body.classList.add('bankrupt');
+                container.classList.add('bankrupt-border');
+                characterImg.style.filter = 'grayscale(100%) contrast(150%) brightness(0.6)';
+                logDisplay.textContent = "💀 파산하셨습니다... 어둠 속에서 대출이나 대책을 마련하세요!";
+                logDisplay.style.color = "#ff4d4d";
+            } else {
+                document.body.classList.remove('bankrupt');
+                container.classList.remove('bankrupt-border');
+                // 정상 채도 업데이트
+                const grayscaleValue = isHiddenJiwon ? 0 : (100 - ((currentLevel - 1) * 11.11));
+                characterImg.style.filter = `grayscale(${grayscaleValue}%)` + (isHiddenJiwon ? ' hue-rotate(90deg) brightness(1.2)' : '');
+            }
+
+            // 베팅 슬라이더 Max 설정
+            betSlider.max = money;
+            if (parseInt(betSlider.value) > money) {
+                betSlider.value = money;
+            }
+            updateBet();
+
+            // 졸업 상태
+            if (currentLevel === 10) {
+                gradCap.style.display = 'block';
+            } else {
+                gradCap.style.display = 'none';
+            }
+        }
+
+        // 베팅금 슬라이더 조절 시
+        function updateBet() {
+            betAmount = parseInt(betSlider.value);
+            const bonusRate = Math.min(20, Math.floor(betAmount / 100000) * 2);
+            betDisplay.textContent = `${betAmount.toLocaleString()}원 (+${bonusRate}% 보너스)`;
+        }
+
+        // 💸 빚 갚기 기능
+        function repayDebt() {
+            if (debt <= 0) {
+                alert("갚을 대출금이 없습니다!");
+                return;
+            }
+
+            if (money <= 0) {
+                alert("갚을 소지금이 없습니다!");
+                return;
+            }
+
+            // 상환 가능 액수 계산 (소지금 범위 내)
+            const payAmount = Math.min(money, debt);
+            money -= payAmount;
+            debt -= payAmount;
+
+            logDisplay.textContent = `💸 대출금 ${payAmount.toLocaleString()}원을 상환했습니다!`;
+            logDisplay.style.color = "#4ade80";
+
+            updateUI();
+        }
+
+        // 육성(강화) 로직
+        function enhance() {
+            if (currentLevel >= 10) return;
+
+            if (money <= 0) {
+                alert("소지금이 0원입니다! 사채를 빌려 자금을 확보하세요.");
+                return;
+            }
+
+            if (money < betAmount) {
+                alert("베팅 금액에 필요한 소지금이 부족합니다!");
+                return;
+            }
+
+            // 베팅금 차감
+            money -= betAmount;
+            attemptCount++;
+
+            // 확률 계산 (기본 확률 + 베팅 보너스)
+            const bonusRate = Math.min(20, Math.floor(betAmount / 100000) * 2);
+            const finalRate = Math.min(95, levelData[currentLevel - 1].baseRate + bonusRate);
+
+            const randomValue = Math.random() * 100;
+
+            // 🎲 2% 확률로 '히든 황금 지원이' 발견 이벤트!
+            if (Math.random() < 0.02 && !isHiddenJiwon) {
+                isHiddenJiwon = true;
+                logDisplay.textContent = "✨ 헐! 전설의 [황금 지원이]를 발견했습니다! (보너스 자금 +50만)";
+                logDisplay.style.color = "#fbbf24";
+                money += 500000;
+            } else if (randomValue < finalRate) {
+                // 🎉 성공 로직
+                currentLevel++;
+                const rewardMoney = currentLevel * 100000;
+                money += rewardMoney;
+
+                logDisplay.textContent = `성공! 지원이가 Lv.${currentLevel} 달성! (지원금 +${rewardMoney.toLocaleString()}원)`;
+                logDisplay.style.color = "#38bdf8";
+            } else {
+                // 💸 실패 로직 (70만 원 차감)
+                const penalty = 700000;
+                money = Math.max(0, money - penalty);
+
+                if (currentLevel > 1) {
+                    currentLevel--;
+                    logDisplay.textContent = `실패... 슬럼프로 레벨 하락! (손실 -${penalty.toLocaleString()}원)`;
+                } else {
+                    logDisplay.textContent = `실패! Lv.1 유지되지만 큰 손실 발생 (-${penalty.toLocaleString()}원)`;
+                }
+                logDisplay.style.color = "#f87171";
+            }
+
+            // 히스토리 기록 (꺾은선 그래프용)
+            attemptHistory.push(`${attemptCount}회`);
+            levelHistory.push(currentLevel);
+
+            levelDisplay.textContent = levelData[currentLevel - 1].title;
+            updateUI();
+            renderTable();
+
+            // 만렙 달성 처리
+            if (currentLevel === 10) {
+                logDisplay.textContent = "🎉 축하합니다! 지원이가 무사히 학교를 졸업했습니다!";
+                logDisplay.style.color = "#34d399";
+                enhanceBtn.textContent = "🎓 졸업 완료!";
+                enhanceBtn.disabled = true;
+                enhanceBtn.style.backgroundColor = "#475569";
+            }
+        }
+
+        // 🚨 무서운 대출 경고창 띄우기
+        function triggerScaryLoan() {
+            document.getElementById('scary-overlay').style.display = 'flex';
+        }
+
+        // 😱 사채 승인 완료
+        function confirmLoan() {
+            money += 1000000;
+            debt += 2000000; // 원금의 2배 빚 적립
+            document.getElementById('scary-overlay').style.display = 'none';
+            logDisplay.textContent = "😱 사채 100만 원이 입금되었습니다... (빚 +200만 원)";
+            logDisplay.style.color = "#ef4444";
+            updateUI();
+        }
+
+        // 🛑 대출 취소
+        function cancelLoan() {
+            document.getElementById('scary-overlay').style.display = 'none';
+            logDisplay.textContent = "휴... 대출을 취소하고 현명한 선택을 하셨습니다!";
+            logDisplay.style.color = "#cbd5e1";
+        }
+
+        // 📈 실시간 꺾은선 그래프 그리기
+        function openGraphModal() {
+            toggleModal('graph-modal', true);
+
+            const ctx = document.getElementById('levelLineChart').getContext('2d');
+
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: attemptHistory,
+                    datasets: [{
+                        label: '지원이 레벨',
+                        data: levelHistory,
+                        borderColor: '#38bdf8',
+                        backgroundColor: 'rgba(56, 189, 248, 0.2)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#fbbf24'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            min: 1,
+                            max: 10,
+                            ticks: {
+                                stepSize: 1,
+                                color: '#f8fafc'
+                            },
+                            grid: {
+                                color: '#334155'
+                            }
+                        },
+                        x: {
+                            ticks: { color: '#94a3b8' },
+                            grid: { color: '#334155' }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: { color: '#f8fafc' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 모달 제어
+        function toggleModal(modalId, show) {
+            document.getElementById(modalId).style.display = show ? 'flex' : 'none';
+        }
+
+        // 확률 표 생성
+        function renderTable() {
+            const tbody = document.getElementById('probability-table');
+            tbody.innerHTML = '';
+
+            levelData.forEach((data) => {
+                const row = document.createElement('tr');
+                if (data.level === currentLevel) {
+                    row.classList.add('current-row');
+                }
+                const rateText = data.level === 10 ? '최고 단계' : `${data.baseRate}%`;
+                const rewardText = data.level === 1 ? '-' : `+${(data.level * 100000).toLocaleString()}원`;
+
+                row.innerHTML = `
+                    <td>${data.level}</td>
+                    <td>${data.title}</td>
+                    <td>${rateText}</td>
+                    <td>${rewardText}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // 초기화
+        updateUI();
+        renderTable();
+    </script>
+</body>
+</html>
